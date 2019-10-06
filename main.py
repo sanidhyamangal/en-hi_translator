@@ -108,3 +108,26 @@ def convert(lang, tensor):
     for t in tensor:
         if t!=0:
             print("%d -------> %s" % (t, lang.index_word[t]))
+
+# create tf.data dataset
+
+# batch and buffer size for the shuffling
+BUFFER_SIZE = len(input_tensor_train)
+BATCH_SIZE = 64
+
+# NUM of steps to train per epoch
+steps_per_epochs = BUFFER_SIZE // BATCH_SIZE
+
+# hyper parms for the data
+embedding_dims = 256
+units = 1024
+
+# final dims for input and target language
+vocab_input_size = len(input_lang.word_index) + 1
+vocab_target_size = len(target_lang.word_index) + 1
+
+# dataset for training
+dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(BUFFER_SIZE)
+
+# create mini batch of dataset
+dataset = dataset.batch(BATCH_SIZE, drop_remainder=True)
