@@ -18,7 +18,7 @@ import time # for managing time
 import os # for os related ops
 
 # a path to the file 
-path_to_file = os.path.dirname('./')+'hin.txt'
+path_to_file = './hin.txt'
 
 # function to convert unicode into the text
 def unicode_to_ascii(s):
@@ -42,3 +42,14 @@ def preprocess_sentence(w):
     w = '<start> ' + w + ' <end>'
 
     return w
+
+# function to create dataset
+def create_dataset(path, num_examples=None):
+    # extract lines from the data file
+    lines = io.open(path, encoding='UTF-8').read().strip().split('\n')
+
+    # get the word pairs after processing the sentences
+    word_pairs = [[preprocess_sentence(w) for w in l.split('\t')] for l in lines[:num_examples]]
+
+    # return zipped word pairs
+    return zip(*word_pairs)
