@@ -254,7 +254,7 @@ class Decoder(tf.keras.Model):
 decoder = Decoder(vocab_target_size, embedding_dims, units, BATCH_SIZE)
 
 # Optimizer for the code
-optmizer = tf.keras.optimizers.Adam()
+optimizer = tf.keras.optimizers.Adam()
 
 # loss object 
 loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
@@ -268,3 +268,46 @@ def loss_function(real, pred):
     loss_*=mask
 
     return tf.reduce_mean(loss_)
+
+# checkpoints
+# create object based checkpoints
+checkpoint_dir = './training_checkpoints'
+checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
+checkpoint = tf.train.Checkpoint(optimizer=optimizer, encoder=encoder, decoder=decoder)
+
+
+# training function
+@tf.function
+def train_step(inp, targ, enc_hidden):
+
+    # init loss variable
+    loss = 0
+
+    # GradientTape
+    with tf.GradientTape() as tape:
+        enc_output, enc_hidden = encoder(inp, enc_hidden)
+
+        # decoder 
+        dec_hidden = enc_hidden
+
+        dec_input = tf.expand_dims([target_lang.word_index['<start>']] * BATCH_SIZE, 1)
+
+        # feed forward network 
+        for t in range(1, targ.shape[1]):
+            predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
+
+            loss+= loss_function(targ[:, t], predictions)
+
+            dec_input = tf.expand_dims(targ[:, t], 1)
+
+        batch_loss = (loss / int(targ.shape[1]))
+
+        # variables to be trained
+        variables = encoder.trainable_variables + decoder.trainable_variables
+
+        gradients = tape.gradient(loss, variables)
+
+        # optimize
+        optimizer.apply_gradients(zip(gradients, variables))
+
+        return batch_loss
