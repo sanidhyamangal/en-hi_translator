@@ -160,5 +160,48 @@ class Encoder(tf.keras.Model):
 
         return output, state
 
+    # function to initialize hidden state
     def initialize_hidden_state(self):
         return tf.zeros((self.batch_sz, self.enc_units))
+
+# instance of the encoder
+encoder = Encoder(vocab_input_size, embedding_dims, units, BATCH_SIZE)
+
+# sample hidden state
+sample_hidden = encoder.initialize_hidden_state()
+
+# attention part 
+#BahdanauAttention class
+
+class BahdanauAttention(tf.keras.Model):
+    """ Attention Part of the NMT for translation"""
+    
+    # constructor
+    def __init__(self, units):
+
+        # calling constructor of model class
+        super(BahdanauAttention, self).__init__()
+
+        # weight matrixs
+        self.W1 = tf.keras.layers.Dense(units)
+        self.W2 = tf.keras.layers.Dense(units)
+        self.V = tf.keras.layers.Dense(1)
+
+    def call(self, query, values):
+        # init a hidden with time step
+        hidden_with_time_axis = tf.expand_dims(query+1)
+
+        # score value
+        score = self.V(tf.nn.tanh(self.W1(values) + self.W2(hidden_with_time_axis)))
+
+        # attention weights
+        attention_weights = tf.nn.softmax(score, axis=1)
+
+        context_vector = attention_weights * values
+        context_vector = tf.reduce_sum(context_vector, axis=1)
+
+        return context_vector, attention_weights
+
+
+# attention layer
+attention_layer = BahdanauAttention(10)
