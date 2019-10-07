@@ -131,3 +131,34 @@ dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_
 
 # create mini batch of dataset
 dataset = dataset.batch(BATCH_SIZE, drop_remainder=True)
+
+# encoder class for the NMT
+class Encoder(tf.keras.Model):
+    """Encoder Part for the NMT"""
+
+    # constructor for the class
+    def __init__(self, vocab_size, embedding_dim, enc_units, batch_sz):
+        # calling super constructor
+        super(Encoder, self).__init__()
+
+        # batchsize 
+        self.batch_sz = batch_sz
+        #encoding units
+        self.enc_units = enc_units
+
+        # init an embedding layer
+        self.embeddig = tf.keras.layers.Embedding(vocab_size, embedding_dim)
+        # gru layer for the grus
+        self.gru = tf.keras.layers.GRU(self.enc_units, return_sequences=True, return_state=True, recurrent_initializer='glorot_uniform')
+
+        # a call method for forward pass
+        def call(self, x, hidden):
+            # embedding layer 
+            x = self.embeddig(x)
+            # pass through gru state
+            output, state = self.gru(x)
+
+            return output, state
+
+        def initialize_hidden_state(self):
+            return tf.zeros((self.batch_sz, self.enc_units))
