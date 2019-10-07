@@ -151,14 +151,14 @@ class Encoder(tf.keras.Model):
         # gru layer for the grus
         self.gru = tf.keras.layers.GRU(self.enc_units, return_sequences=True, return_state=True, recurrent_initializer='glorot_uniform')
 
-        # a call method for forward pass
-        def call(self, x, hidden):
-            # embedding layer 
-            x = self.embeddig(x)
-            # pass through gru state
-            output, state = self.gru(x)
+    # a call method for forward pass
+    def call(self, x, hidden):
+        # embedding layer 
+        x = self.embeddig(x)
+        # pass through gru state
+        output, state = self.gru(x)
 
-            return output, state
+        return output, state
 
-        def initialize_hidden_state(self):
-            return tf.zeros((self.batch_sz, self.enc_units))
+    def initialize_hidden_state(self):
+        return tf.zeros((self.batch_sz, self.enc_units))
