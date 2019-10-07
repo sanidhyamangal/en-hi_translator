@@ -3,29 +3,32 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import division
 
-# import tensorflow 
+# import tensorflow
 import tensorflow as tf
 
-# import test split dataset 
+# import test split dataset
 from sklearn.model_selection import train_test_split
 
-# import helper libs 
-import unicodedata # to process unicode dataset 
-import re # a regx lib for the text 
-import numpy as np # for matrix maths 
-import io # for input and output of the files 
-import time # for managing time
-import os # for os related ops
+# import helper libs
+import unicodedata  # to process unicode dataset
+import re  # a regx lib for the text
+import numpy as np  # for matrix maths
+import io  # for input and output of the files
+import time  # for managing time
+import os  # for os related ops
 
-# a path to the file 
-path_to_file = './hin.txt'
+# a path to the file
+path_to_file = "./hin.txt"
 
 # function to convert unicode into the text
 def unicode_to_ascii(s):
     # normalize the data using unicode data
-    return ''.join(c for c in unicodedata.normalize('NFD', s) if unicodedata.category(c) != 'Mn')
+    return "".join(
+        c for c in unicodedata.normalize("NFD", s) if unicodedata.category(c) != "Mn"
+    )
 
-# function to preprocess the sentence 
+
+# function to preprocess the sentence
 def preprocess_sentence(w):
 
     # get ascii version of the text
@@ -39,30 +42,35 @@ def preprocess_sentence(w):
     w = w.rstrip().strip()
 
     # add start and end in the sentence
-    w = '<start> ' + w + ' <end>'
+    w = "<start> " + w + " <end>"
 
     return w
+
 
 # function to create dataset
 def create_dataset(path, num_examples=None):
     # extract lines from the data file
-    lines = io.open(path, encoding='UTF-8').read().strip().split('\n')
+    lines = io.open(path, encoding="UTF-8").read().strip().split("\n")
 
     # get the word pairs after processing the sentences
-    word_pairs = [[preprocess_sentence(w) for w in l.split('\t')] for l in lines[:num_examples]]
+    word_pairs = [
+        [preprocess_sentence(w) for w in l.split("\t")] for l in lines[:num_examples]
+    ]
 
     # return zipped word pairs
     return zip(*word_pairs)
+
 
 # function to get max length of a tensor
 def max_length(tensor):
     return max(len(t) for t in tensor)
 
+
 # tokenize the language
 def tokenize(lang):
 
     # create a language tokenizer
-    lang_tokenizer = tf.keras.preprocessing.text.Tokenizer(filters='')
+    lang_tokenizer = tf.keras.preprocessing.text.Tokenizer(filters="")
 
     # fit the text lang to this tokenizer
     lang_tokenizer.fit_on_texts(lang)
@@ -71,16 +79,16 @@ def tokenize(lang):
     tensor = lang_tokenizer.texts_to_sequences(lang)
 
     # pad the tensor sequences
-    tensor = tf.keras.preprocessing.sequence.pad_sequences(tensor, padding='post')
+    tensor = tf.keras.preprocessing.sequence.pad_sequences(tensor, padding="post")
 
     return tensor, lang_tokenizer
 
 
-# function to load the dataset 
+# function to load the dataset
 def load_dataset(path, num_examples=None):
 
     # create dataset
-    inp_lang, targ_lang =  create_dataset(path, num_examples)
+    inp_lang, targ_lang = create_dataset(path, num_examples)
 
     # tokenize input lang
     input_tensor, input_lang_tokenizer = tokenize(inp_lang)
@@ -88,26 +96,34 @@ def load_dataset(path, num_examples=None):
     # tokenize target lang
     target_tensor, target_lang_tokenizer = tokenize(targ_lang)
 
-    return input_tensor, target_tensor,  input_lang_tokenizer, target_lang_tokenizer
+    return input_tensor, target_tensor, input_lang_tokenizer, target_lang_tokenizer
 
 
 # limit the size of training to 3000
 num_examples = 3000
 
 # load dataset
-input_tensor, target_tensor, input_lang, target_lang = load_dataset(path_to_file, num_examples)
+input_tensor, target_tensor, input_lang, target_lang = load_dataset(
+    path_to_file, num_examples
+)
 
 # calculate max length of input and target tensor
-max_input_tensor, max_target_tensor = max_length(input_tensor), max_length(target_tensor)
+max_input_tensor, max_target_tensor = (
+    max_length(input_tensor),
+    max_length(target_tensor),
+)
 
 # split the dataset
-input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = train_test_split(input_tensor, target_tensor, test_size=0.2)
+input_tensor_train, input_tensor_val, target_tensor_train, target_tensor_val = train_test_split(
+    input_tensor, target_tensor, test_size=0.2
+)
 
 # function to convert the tensor into text
 def convert(lang, tensor):
     for t in tensor:
-        if t!=0:
+        if t != 0:
             print("%d -------> %s" % (t, lang.index_word[t]))
+
 
 # create tf.data dataset
 
@@ -127,7 +143,9 @@ vocab_input_size = len(input_lang.word_index) + 1
 vocab_target_size = len(target_lang.word_index) + 1
 
 # dataset for training
-dataset = tf.data.Dataset.from_tensor_slices((input_tensor_train, target_tensor_train)).shuffle(BUFFER_SIZE)
+dataset = tf.data.Dataset.from_tensor_slices(
+    (input_tensor_train, target_tensor_train)
+).shuffle(BUFFER_SIZE)
 
 # create mini batch of dataset
 dataset = dataset.batch(BATCH_SIZE, drop_remainder=True)
@@ -141,19 +159,24 @@ class Encoder(tf.keras.Model):
         # calling super constructor
         super(Encoder, self).__init__()
 
-        # batchsize 
+        # batchsize
         self.batch_sz = batch_sz
-        #encoding units
+        # encoding units
         self.enc_units = enc_units
 
         # init an embedding layer
         self.embeddig = tf.keras.layers.Embedding(vocab_size, embedding_dim)
         # gru layer for the grus
-        self.gru = tf.keras.layers.GRU(self.enc_units, return_sequences=True, return_state=True, recurrent_initializer='glorot_uniform')
+        self.gru = tf.keras.layers.GRU(
+            self.enc_units,
+            return_sequences=True,
+            return_state=True,
+            recurrent_initializer="glorot_uniform",
+        )
 
     # a call method for forward pass
     def call(self, x, hidden):
-        # embedding layer 
+        # embedding layer
         x = self.embeddig(x)
         # pass through gru state
         output, state = self.gru(x)
@@ -164,18 +187,20 @@ class Encoder(tf.keras.Model):
     def initialize_hidden_state(self):
         return tf.zeros((self.batch_sz, self.enc_units))
 
+
 # instance of the encoder
 encoder = Encoder(vocab_input_size, embedding_dims, units, BATCH_SIZE)
 
 # sample hidden state
 sample_hidden = encoder.initialize_hidden_state()
 
-# attention part 
-#BahdanauAttention class
+# attention part
+# BahdanauAttention class
+
 
 class BahdanauAttention(tf.keras.Model):
     """ Attention Part of the NMT for translation"""
-    
+
     # constructor
     def __init__(self, units):
 
@@ -189,7 +214,7 @@ class BahdanauAttention(tf.keras.Model):
 
     def call(self, query, values):
         # init a hidden with time step
-        hidden_with_time_axis = tf.expand_dims(query,1)
+        hidden_with_time_axis = tf.expand_dims(query, 1)
 
         # score value
         score = self.V(tf.nn.tanh(self.W1(values) + self.W2(hidden_with_time_axis)))
@@ -202,7 +227,8 @@ class BahdanauAttention(tf.keras.Model):
 
         return context_vector, attention_weights
 
-# Decoder Part 
+
+# Decoder Part
 # Decoder Class
 class Decoder(tf.keras.Model):
     """ A decoder class for the NMT Model"""
@@ -212,7 +238,7 @@ class Decoder(tf.keras.Model):
         # super class constructor
         super(Decoder, self).__init__()
 
-        # batch size 
+        # batch size
         self.batch_sz = batch_sz
         # dec units
         self.dec_units = dec_units
@@ -221,7 +247,12 @@ class Decoder(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
 
         # gru class
-        self.gru = tf.keras.layers.GRU(self.dec_units, return_sequences=True, return_state=True, recurrent_initializer='glorot_uniform')
+        self.gru = tf.keras.layers.GRU(
+            self.dec_units,
+            return_sequences=True,
+            return_state=True,
+            recurrent_initializer="glorot_uniform",
+        )
 
         # a fc layer
         self.fc = tf.keras.layers.Dense(vocab_size)
@@ -229,14 +260,14 @@ class Decoder(tf.keras.Model):
         # attention class
         self.attention = BahdanauAttention(self.dec_units)
 
-    # call method 
+    # call method
     def call(self, x, hidden, enc_output):
         context_vector, attention_weights = self.attention(hidden, enc_output)
 
         # embedding layer
         x = self.embedding(x)
 
-        # concat context_vector and x 
+        # concat context_vector and x
         x = tf.concat([tf.expand_dims(context_vector, 1), x], axis=-1)
 
         # optput from gru
@@ -250,28 +281,32 @@ class Decoder(tf.keras.Model):
 
         return x, state, attention_weights
 
-# decoder instance 
+
+# decoder instance
 decoder = Decoder(vocab_target_size, embedding_dims, units, BATCH_SIZE)
 
 # Optimizer for the code
 optimizer = tf.keras.optimizers.Adam()
 
-# loss object 
-loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
+# loss object
+loss_object = tf.keras.losses.SparseCategoricalCrossentropy(
+    from_logits=True, reduction="none"
+)
 
 # loss function
 def loss_function(real, pred):
     mask = tf.math.logical_not(tf.math.equal(real, 0))
-    loss_ = loss_object(real,pred)
+    loss_ = loss_object(real, pred)
 
     mask = tf.cast(mask, dtype=loss_.dtype)
-    loss_*=mask
+    loss_ *= mask
 
     return tf.reduce_mean(loss_)
 
+
 # checkpoints
 # create object based checkpoints
-checkpoint_dir = './training_checkpoints'
+checkpoint_dir = "./training_checkpoints"
 checkpoint_prefix = os.path.join(checkpoint_dir, "ckpt")
 checkpoint = tf.train.Checkpoint(optimizer=optimizer, encoder=encoder, decoder=decoder)
 
@@ -287,20 +322,20 @@ def train_step(inp, targ, enc_hidden):
     with tf.GradientTape() as tape:
         enc_output, enc_hidden = encoder(inp, enc_hidden)
 
-        # decoder 
+        # decoder
         dec_hidden = enc_hidden
 
-        dec_input = tf.expand_dims([target_lang.word_index['<start>']] * BATCH_SIZE, 1)
+        dec_input = tf.expand_dims([target_lang.word_index["<start>"]] * BATCH_SIZE, 1)
 
-        # feed forward network 
+        # feed forward network
         for t in range(1, targ.shape[1]):
             predictions, dec_hidden, _ = decoder(dec_input, dec_hidden, enc_output)
 
-            loss+= loss_function(targ[:, t], predictions)
+            loss += loss_function(targ[:, t], predictions)
 
             dec_input = tf.expand_dims(targ[:, t], 1)
 
-        batch_loss = (loss / int(targ.shape[1]))
+        batch_loss = loss / int(targ.shape[1])
 
         # variables to be trained
         variables = encoder.trainable_variables + decoder.trainable_variables
@@ -312,7 +347,8 @@ def train_step(inp, targ, enc_hidden):
 
         return batch_loss
 
-# start training 
+
+# start training
 EPOCHS = 10
 
 for epoch in range(EPOCHS):
@@ -331,14 +367,18 @@ for epoch in range(EPOCHS):
         total_loss += batch_loss
 
         if (batch % 100) == 0:
-            print("Epoch {} Batch {} Loss {:.4f}".format(epoch+1, batch, batch_loss.numpy()))
+            print(
+                "Epoch {} Batch {} Loss {:.4f}".format(
+                    epoch + 1, batch, batch_loss.numpy()
+                )
+            )
 
         # saving checkpoint
         if ((epoch + 1) % 2) == 0:
-            checkpoint.save(file_prefix = checkpoint_prefix)
+            checkpoint.save(file_prefix=checkpoint_prefix)
 
         # printing total loss
-    print("Epoch {} Loss {:.4f}".format(epoch+1, total_loss/steps_per_epochs))
+    print("Epoch {} Loss {:.4f}".format(epoch + 1, total_loss / steps_per_epochs))
 
     # print time take in the training process
     print("Time taken for 1 epoch {} sec\n".format(time.time() - start))
