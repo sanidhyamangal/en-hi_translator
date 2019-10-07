@@ -202,10 +202,6 @@ class BahdanauAttention(tf.keras.Model):
 
         return context_vector, attention_weights
 
-
-# attention layer
-attention_layer = BahdanauAttention(10)
-
 # Decoder Part 
 # Decoder Class
 class Decoder(tf.keras.Model):
@@ -253,3 +249,22 @@ class Decoder(tf.keras.Model):
         x = self.fc(output)
 
         return x, state, attention_weights
+
+# decoder instance 
+decoder = Decoder(vocab_target_size, embedding_dims, units, BATCH_SIZE)
+
+# Optimizer for the code
+optmizer = tf.keras.optimizers.Adam()
+
+# loss object 
+loss_object = tf.keras.losses.SparseCategoricalCrossentropy(from_logits=True, reduction='none')
+
+# loss function
+def loss_function(real, pred):
+    mask = tf.math.logical_not(tf.math.equal(real, 0))
+    loss_ = loss_object(real,pred)
+
+    mask = tf.cast(mask, dtype=loss_.dtype)
+    loss_*=mask
+
+    return tf.reduce_mean(loss_)
