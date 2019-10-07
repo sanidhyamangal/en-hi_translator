@@ -189,7 +189,7 @@ class BahdanauAttention(tf.keras.Model):
 
     def call(self, query, values):
         # init a hidden with time step
-        hidden_with_time_axis = tf.expand_dims(query+1)
+        hidden_with_time_axis = tf.expand_dims(query,1)
 
         # score value
         score = self.V(tf.nn.tanh(self.W1(values) + self.W2(hidden_with_time_axis)))
@@ -221,7 +221,7 @@ class Decoder(tf.keras.Model):
         self.embedding = tf.keras.layers.Embedding(vocab_size, embedding_dim)
 
         # gru class
-        self.gru = tf.keras.layers.GRU(self.dec_units, return_sequence=True, return_state=True, recurrent_initializer='glorot_uniform')
+        self.gru = tf.keras.layers.GRU(self.dec_units, return_sequences=True, return_state=True, recurrent_initializer='glorot_uniform')
 
         # a fc layer
         self.fc = tf.keras.layers.Dense(vocab_size)
@@ -311,3 +311,34 @@ def train_step(inp, targ, enc_hidden):
         optimizer.apply_gradients(zip(gradients, variables))
 
         return batch_loss
+
+# start training 
+EPOCHS = 10
+
+for epoch in range(EPOCHS):
+    start = time.time()
+
+    enc_hidden = encoder.initialize_hidden_state()
+
+    total_loss = 0
+
+    # train in mini batch
+    for (batch, (inp, targ)) in enumerate(dataset.take(steps_per_epochs)):
+
+        # caluclate batch loss
+        batch_loss = train_step(inp, targ, enc_hidden)
+
+        total_loss += batch_loss
+
+        if (batch % 100) == 0:
+            print("Epoch {} Batch {} Loss {:.4f}".format(epoch+1, batch, batch_loss.numpy()))
+
+        # saving checkpoint
+        if ((epoch + 1) % 2) == 0:
+            checkpoint.save(file_prefix = checkpoint_prefix)
+
+        # printing total loss
+    print("Epoch {} Loss {:.4f}".format(epoch+1, total_loss/steps_per_epochs))
+
+    # print time take in the training process
+    print("Time taken for 1 epoch {} sec\n".format(time.time() - start))
